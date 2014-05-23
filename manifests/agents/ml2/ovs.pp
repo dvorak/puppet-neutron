@@ -8,7 +8,7 @@
 #   (optional) Firewall driver for realizing neutron security group function.
 #   Defaults to 'neutron.agent.linux.iptables_firewall.OVSHybridIptablesFirewallDriver'.
 #
-class neutron::agents::ovsml2 (
+class neutron::agents::ml2::ovs (
   $package_ensure       = 'present',
   $enabled              = true,
   $bridge_uplinks       = [],
@@ -20,6 +20,7 @@ class neutron::agents::ovsml2 (
   $tunnel_bridge        = 'br-tun',
   $vxlan_udp_port       = 4789,
   $polling_interval     = 2,
+  $l2_population        = false,
   $firewall_driver      = 'neutron.agent.linux.iptables_firewall.OVSHybridIptablesFirewallDriver'
 ) {
 
@@ -30,8 +31,7 @@ class neutron::agents::ovsml2 (
     fail('Local ip for ovs agent must be set when tunneling is enabled')
   }
 
-  Neutron_config<||>     ~> Service['neutron-plugin-ovs-service']
-  Neutron_plugin_ovs<||> ~> Service['neutron-plugin-ovs-service']
+  Neutron_plugin_ml2<||> ~> Service['neutron-ovs-agent-service']
 
   if ($bridge_mappings != []) {
     # bridge_mappings are used to describe external networks that are
@@ -50,43 +50,44 @@ class neutron::agents::ovsml2 (
     # The OVS neutron plugin will talk in terms of the networks in the bridge_mappings
     $br_map_str = join($bridge_mappings, ',')
     neutron_plugin_ml2 {
-      'OVS/bridge_mappings': value => $br_map_str;
+      'ovs/bridge_mappings': value => $br_map_str;
     }
     neutron::plugins::ovs::bridge{ $bridge_mappings:
-      before => Service['neutron-plugin-ovs-service'],
+      before => Service['neutron-ovs-agent-service'],
     }
     neutron::plugins::ovs::port{ $bridge_uplinks:
-      before => Service['neutron-plugin-ovs-service'],
+      before => Service['neutron-ovs-agent-service'],
     }
   }
 
   neutron_plugin_ml2 {
-    'AGENT/polling_interval': value => $polling_interval;
-    'OVS/integration_bridge': value => $integration_bridge;
+    'agent/polling_interval': value => $polling_interval;
+    'agent/l2_population':    value => $l2_population;
+    'ovs/integration_bridge': value => $integration_bridge;
   }
 
   if ($firewall_driver) {
-    neutron_plugin_ml2 { 'SECURITYGROUP/firewall_driver':
+    neutron_plugin_ml2 { 'securitygroup/firewall_driver':
       value => $firewall_driver
     }
   } else {
-    neutron_plugin_ml2 { 'SECURITYGROUP/firewall_driver': ensure => absent }
+    neutron_plugin_ml2 { 'securitygroup/firewall_driver': ensure => absent }
   }
 
   vs_bridge { $integration_bridge:
     ensure => present,
-    before => Service['neutron-plugin-ovs-service'],
+    before => Service['neutron-ovs-agent-service'],
   }
 
   if $enable_tunneling {
     vs_bridge { $tunnel_bridge:
       ensure => present,
-      before => Service['neutron-plugin-ovs-service'],
+      before => Service['neutron-ovs-agent-service'],
     }
     neutron_plugin_ml2 {
-      'OVS/enable_tunneling': value => true;
-      'OVS/tunnel_bridge':    value => $tunnel_bridge;
-      'OVS/local_ip':         value => $local_ip;
+      'ovs/enable_tunneling': value => true;
+      'ovs/tunnel_bridge':    value => $tunnel_bridge;
+      'ovs/local_ip':         value => $local_ip;
     }
 
     if size($tunnel_types) > 0 {
@@ -102,16 +103,16 @@ class neutron::agents::ovsml2 (
     }
   } else {
     neutron_plugin_ml2 {
-      'OVS/enable_tunneling': value  => false;
-      'OVS/tunnel_bridge':    ensure => absent;
-      'OVS/local_ip':         ensure => absent;
+      'ovs/enable_tunneling': value  => false;
+      'ovs/tunnel_bridge':    ensure => absent;
+      'ovs/local_ip':         ensure => absent;
     }
   }
 
 
   if $::neutron::params::ovs_agent_package {
-    Package['neutron-plugin-ovs-agent'] -> Neutron_plugin_ovs<||>
-    package { 'neutron-plugin-ovs-agent':
+    Package['neutron-ovs-agent'] -> Neutron_plugin_ml2<||>
+    package { 'neutron-ovs-agent':
       ensure  => $package_ensure,
       name    => $::neutron::params::ovs_agent_package,
     }
@@ -119,11 +120,11 @@ class neutron::agents::ovsml2 (
     # Some platforms (RedHat) do not provide a separate
     # neutron plugin ovs agent package. The configuration file for
     # the ovs agent is provided by the neutron ovs plugin package.
-    Package['neutron-plugin-ovs'] -> Neutron_plugin_ovs<||>
-    Package['neutron-plugin-ovs'] -> Service['ovs-cleanup-service']
+    Package['neutron-ovs-agent'] -> Neutron_plugin_ml2<||>
+    Package['neutron-ovs-agent'] -> Service['ovs-cleanup-service']
 
-    if ! defined(Package['neutron-plugin-ovs']) {
-      package { 'neutron-plugin-ovs':
+    if ! defined(Package['neutron-ovs-agent']) {
+      package { 'neutron-ovs-agent':
         ensure  => $package_ensure,
         name    => $::neutron::params::ovs_server_package,
       }
@@ -136,7 +137,7 @@ class neutron::agents::ovsml2 (
     $service_ensure = 'stopped'
   }
 
-  service { 'neutron-plugin-ovs-service':
+  service { 'neutron-ovs-agent-service':
     ensure  => $service_ensure,
     name    => $::neutron::params::ovs_agent_service,
     enable  => $enabled,
