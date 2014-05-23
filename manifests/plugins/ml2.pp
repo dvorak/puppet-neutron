@@ -164,15 +164,6 @@ class neutron::plugins::ml2 (
       })
       Package['neutron-plugin-ovs'] -> Neutron_plugin_ovs<||>
     }
-    if ('l2population' in $mechanism_drivers) {
-      neutron_plugin_ovs {
-        'agent/l2_population': value => true;
-      }
-    } else {
-      neutron_plugin_ovs {
-        'agent/l2_population': value => false;
-      }
-    }
   }
   if ('linuxbridge' in $mechanism_drivers) {
     if ($::osfamily == 'RedHat') {
