@@ -182,26 +182,5 @@ class neutron::plugins::ml2 (
       }
       Package['neutron-plugin-linuxbridge'] -> Neutron_plugin_linuxbridge<||>
     }
-    if ('l2population' in $mechanism_drivers) {
-      neutron_plugin_linuxbridge {
-        'vxlan/enable_vxlan':  value => true;
-        'vxlan/l2_population': value => true;
-      }
-    } else {
-      neutron_plugin_linuxbridge {
-        'vxlan/l2_population': value => false;
-      }
-    }
   }
-
-  if $enable_security_group {
-    neutron_plugin_ml2 {
-      'securitygroup/firewall_driver': value => $firewall_driver;
-    }
-  } else {
-    neutron_plugin_ml2 {
-      'securitygroup/firewall_driver': value => 'neutron.agent.firewall.NoopFirewallDriver';
-    }
-  }
-
 }
