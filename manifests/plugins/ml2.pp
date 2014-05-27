@@ -83,18 +83,6 @@
 #   Min value is 0 and Max value is 16777215.
 #   Default to empty.
 #
-# [*enable_security_group*]
-#   (optionnal) Enable the security group API or not.
-#   Since the ML2 plugin can concurrently support different L2 agents (or other
-#   mechanisms) with different configurations, we need to set something to the
-#   firewall_driver flag to enable security group API.
-#   Defaults to false.
-#
-# [*firewall_driver*]
-#   (optionnal) Set a firewall driver value.
-#   If enable_security_group is enabled, it should be either true or a custom
-#   firewall driver.
-#   Defaults to true.
 
 class neutron::plugins::ml2 (
   $type_drivers          = ['local', 'flat', 'vlan', 'gre', 'vxlan'],
@@ -105,8 +93,8 @@ class neutron::plugins::ml2 (
   $tunnel_id_ranges      = ['20:100'],
   $vxlan_group           = '224.0.0.1',
   $vni_ranges            = ['10:100'],
-  $enable_security_group = false,
-  $firewall_driver       = true
+  # DEPRECATED PARAMS
+  $enable_security_group = undef
 ) {
 
   include neutron::params
@@ -174,4 +162,5 @@ class neutron::plugins::ml2 (
       Package['neutron-plugin-linuxbridge'] -> Neutron_plugin_linuxbridge<||>
     }
   }
+
 }
