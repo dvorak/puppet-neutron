@@ -71,6 +71,7 @@ class neutron::server::notifications (
   $nova_admin_tenant_id               = undef,
   $nova_admin_password                = false,
   $nova_region_name                   = 'RegionOne',
+  $notification_topics                = 'notifications',
 ) {
 
   # Depend on the specified keystone_user resource, if it exists.
@@ -93,6 +94,7 @@ class neutron::server::notifications (
     'DEFAULT/nova_admin_username':                value => $nova_admin_username;
     'DEFAULT/nova_admin_password':                value => $nova_admin_password;
     'DEFAULT/nova_region_name':                   value => $nova_region_name;
+    'DEFAULT/notification_topics':                value => $notification_topics;
   }
 
   if $nova_admin_tenant_id {
