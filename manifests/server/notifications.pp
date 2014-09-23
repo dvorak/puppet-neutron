@@ -59,6 +59,10 @@
 #   one region.
 #   Defaults to 'RegionOne'
 #
+# [*notification_topics*]
+#   (optional) AMQP topic used for OpenStack notifications
+#   Defaults to 'notifications'
+#
 
 class neutron::server::notifications (
   $notify_nova_on_port_status_changes = true,
